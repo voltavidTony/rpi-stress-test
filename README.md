@@ -14,7 +14,8 @@ Optionally, create a log file by piping the output into `tee` and specifying an 
     * How many stress tests to perform
     * Default: 1
   * `interval` : optional
-    * The time in seconds inbetween system measurements
+    * The time in seconds inbetween CPU measurements
+    * When 0, measure CPU after completion of each stress test
     * Default 5
   * All non-digit characters (incluing '-' and '.') are stripped, and
   * If the result is empty, then default values are used
