@@ -90,9 +90,11 @@ function measure() {
 }
 
 # CPU measurement loop
+# Don't use sleep because it doesn't account for overhead
 function monitor() {
     while true; do
-        sleep $1
+        time=$(date +%s)
+        while [[ $(($(date +%s) - $time)) -lt $1 ]]; do :; done
         measure
     done
 }
