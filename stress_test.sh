@@ -96,7 +96,7 @@ function monitor() {
     while true; do
         while [[ $(($(date +%s) - $time)) -lt $1 ]]; do :; done
         time=$(date +%s)
-        measure
+        measure &
     done
 }
 
@@ -122,7 +122,7 @@ for ((i=1; i<=$arg1; i++)); do
     echo -e "\e[96m-------------\e[39m Stress test $i \e[96m-------------\e[39m"
     sysbench --test=cpu --cpu-max-prime=20000 --num-threads=$(cat /proc/cpuinfo | grep -c "processor") run > /dev/null 2>&1
     if [ $arg2 -eq 0 ]; then
-        measure
+        measure &
     fi
 done
 
