@@ -23,8 +23,7 @@
 
 # Display command help when 0 stress tests are scheduled to run
 if [ $# -eq 0 ]; then
-    echo -e "Command usage: \e[93m./stress_test.sh \e[96m{\e[91m[\e[93mamount\e[91m] <\e[93minterval\e[91m>\e[96m}" \
-            "{\e[93m| tee \e[91m[\e[93mfile_name\e[91m]\e[96m}\e[39m"
+    echo -e "Command usage: \e[93m./stress_test.sh \e[91m[\e[93mamount\e[91m] [\e[93minterval\e[91m]"
     echo "No arguments: Display this information"
     echo "Arguments:"
     echo "    <name>     <default>   <description>"
@@ -32,19 +31,13 @@ if [ $# -eq 0 ]; then
     echo "                            If 0, displays this information"
     echo "    interval - 5         - Time in seconds between temperature measurement"
     echo "                            If 0, measures once after each stress test"
-    echo -e "    filename -           - The file to save the terminal output to; '\e[93mtee\e[39m'"
-    echo "                            is used to both display and save terminal output"
-    echo "Delimiters:"
-    echo -e "    \e[91m<>\e[39m - Optional"
-    echo -e "    \e[91m[]\e[39m - Required"
-    echo -e "    \e[96m{}\e[39m - Omittable"
-    echo -e "\e[93mNote: \e[39mArguments 'amount' and 'interval' are stripped of any non-digit characters!"
+    echo -e "\e[93mNote: \e[39mArguments are stripped of any non-digit characters!"
     exit 0
 fi
 
 # Get required package 'sysbench', install if necessary
 if [ $(dpkg-query -W -f='${Status}' sysbench 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    if [[ $EUID != 0 ]]; then
+    if [[ $EUID -ne 0 ]]; then
         echo -e "\e[91mMissing required package 'sysbench'!\e[39m"
         echo -e "\e[93mPlease run as root or intall sysbench manually!\e[39m"
         exit 1
@@ -54,17 +47,20 @@ if [ $(dpkg-query -W -f='${Status}' sysbench 2>/dev/null | grep -c "ok installed
     echo -e "\e[93mDone installing 'sysbench'\e[39m"
 fi
 
-# Strip non-digit characters from 'arg1' and 'arg2', and provide defaults if the result is empty
-# 'agr1' = Number of consecutive stress tests
-# 'arg2' = Time interval between CPU measurements
-# 'f' = Grammar variable
-arg1=${1//[!0-9]/}
-arg1=${arg1:-1}
+# Number of consecutive stress tests
+arg1=${1:-0}
+arg1=${arg1//[!0-9]/}
+# Grammar variable 1
 if [ $arg1 -ne 1 ]; then
-    f=s
+    ess1=s
 fi
-arg2=${2//[!0-9]/}
-arg2=${arg2:-5}
+# Time interval between CPU measurements
+arg2=${2:-5}
+arg2=${arg2//[!0-9]/}
+# Grammar variable 2
+if [ $arg2 -ne 1 ]; then
+    ess2=s
+fi
 
 # Proper keyboard interupt abort mesage
 function ctrl_c() {
@@ -90,26 +86,21 @@ function measure() {
 }
 
 # CPU measurement loop
-# Don't use sleep because it doesn't account for overhead
 function monitor() {
     time=$(date +%s)
     while true; do
         while [[ $(($(date +%s) - $time)) -lt $1 ]]; do :; done
         time=$(date +%s)
-        measure &
+        measure
     done
 }
 
 # Stress test execution message
-echo -e "Running \e[93m$arg1\e[39m stress test$f"
+echo -e "Running \e[93m$arg1\e[39m stress test$ess1"
 if [ $arg2 -eq 0 ]; then
     echo "Measuring cpu after every test"
 else
-    if [ $arg2 -eq 1 ]; then
-        echo "Measuring CPU every second"
-    else
-        echo -e "Measuring CPU every \e[93m$arg2\e[39m seconds"
-    fi
+    echo -e "Measuring CPU every \e[93m$arg2\e[39m second$ess2"
     monitor $arg2 &
 fi
 
@@ -122,7 +113,7 @@ for ((i=1; i<=$arg1; i++)); do
     echo -e "\e[96m-------------\e[39m Stress test $i \e[96m-------------\e[39m"
     sysbench --test=cpu --cpu-max-prime=20000 --num-threads=$(cat /proc/cpuinfo | grep -c "processor") run > /dev/null 2>&1
     if [ $arg2 -eq 0 ]; then
-        measure &
+        measure
     fi
 done
 
@@ -133,6 +124,6 @@ if [ $arg2 -ne 0 ]; then
 fi
 
 # Stress test finish message
-echo -e "\e[92mFinished stress test$f\e[39m"
+echo -e "\e[92mFinished stress test$ess1\e[39m"
 measure
 exit 0
